@@ -1,0 +1,123 @@
+<!doctype html><html><head><meta charset="UTF-8"/><title>Wheel Settings</title></head><body><h1>Wheel Settings</h1><table border="1" cellpadding="5"><thead><tr><th>Item</th><th>Available</th><th>Chance (weight)</th><th>Dropped count</th></tr></thead><tbody id="items"></tbody></table><p><button id="resetStats">Reset Stats</button></p><script>const SETTINGS_KEY = "wheelSettings";
+    const STATS_KEY = "wheelStats";
+    const ITEM_COUNT = 8;
+
+    // 1. Captions per item (static, not saved to localStorage)
+    // TODO: fill in real EN/ZH labels later
+    
+   const ITEM_CAPTIONS = [
+    { id: "wheel_item0", en: "Gold Coin", zh: "金币" },
+    { id: "wheel_item1", en: "Silver Coin", zh: "银币" },
+    { id: "wheel_item2", en: "Cardholder", zh: "卡包" },
+    { id: "wheel_item3", en: "Pin Badge", zh: "徽章" },
+    { id: "wheel_item4", en: "Blacklyte Pin Badge", zh: "Blacklyte 徽章" },
+    { id: "wheel_item5", en: "Blacklyte Bag", zh: "Blacklyte 背包" },
+    { id: "wheel_item6", en: "Jersey Keychain", zh: "队服钥匙链" },
+    { id: "wheel_item7", en: "Jersey Cushion", zh: "队服抱枕" },
+  ];
+
+    // 2. Default drop weights per item (author-defined)
+    // index 0 weight is for wheel_item0, etc.
+    // You can tune this list without touching code logic.
+    const DEFAULT_WEIGHTS = [1, 1, 1, 1, 1, 1, 1, 1];
+
+    // Helpers to load/save arrays from localStorage, with fallback
+    function loadArrayOr(defaultValue, key) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        return Array.isArray(data) ? data : defaultValue;
+      } catch {
+        return defaultValue;
+      }
+    }
+    function save(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    // Build default settings structure using DEFAULT_WEIGHTS
+    function buildDefaultSettings() {
+      return ITEM_CAPTIONS.map((item, i) => ({
+        id: item.id,
+        available: true,
+        chance: DEFAULT_WEIGHTS[i] ?? 1
+      }));
+    }
+
+    // Load settings. If none saved, create from defaults.
+    let settings = loadArrayOr(null, SETTINGS_KEY);
+    if (!settings) {
+      settings = buildDefaultSettings();
+    }
+
+    // Load stats. If none, fill with zeros.
+    let stats = loadArrayOr(Array(ITEM_COUNT).fill(0), STATS_KEY);
+
+    const tbody = document.getElementById("items");
+
+    function renderTable() {
+      tbody.innerHTML = "";
+
+      settings.forEach((item, i) => {
+        const meta = ITEM_CAPTIONS[i];
+
+        const tr = document.createElement("tr");
+
+        // ID
+        const tdId = document.createElement("td");
+        tdId.textContent = item.id;
+
+        // EN caption
+        const tdName = document.createElement("td");
+        tdName.textContent = meta.zh+"/"+meta.en;
+
+
+        // Available checkbox
+        const tdAvail = document.createElement("td");
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.checked = item.available;
+        chk.addEventListener("change", () => {
+          item.available = chk.checked;
+          save(SETTINGS_KEY, settings);
+        });
+        tdAvail.appendChild(chk);
+
+        // Chance / weight
+        const tdChance = document.createElement("td");
+        const inp = document.createElement("input");
+        inp.type = "number";
+        inp.min = "0";
+        inp.step = "0.1";
+        inp.value = item.chance;
+        inp.addEventListener("change", () => {
+          item.chance = parseFloat(inp.value) || 0;
+          save(SETTINGS_KEY, settings);
+        });
+        tdChance.appendChild(inp);
+
+        // Dropped count
+        const tdStat = document.createElement("td");
+        tdStat.textContent = stats[i];
+
+        tr.append(tdName, tdAvail, tdChance, tdStat);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function refreshStats() {
+      stats = loadArrayOr(Array(ITEM_COUNT).fill(0), STATS_KEY);
+      const rows = tbody.querySelectorAll("tr");
+      rows.forEach((tr, i) => {
+        tr.children[5].textContent = stats[i]; // 0:id 1:en 2:zh 3:avail 4:chance 5:stat
+      });
+    }
+
+    document.getElementById("resetStats").addEventListener("click", () => {
+      stats = Array(ITEM_COUNT).fill(0);
+      save(STATS_KEY, stats);
+      refreshStats();
+    });
+
+    // init
+    renderTable();
+    setInterval(refreshStats, 10000);</script></body></html>
